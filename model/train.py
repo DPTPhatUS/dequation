@@ -7,7 +7,7 @@ from data.my_datasets import MathBridge
 from model.translator import TeX2Eng
 import os
 
-BATCH_SIZE = 64
+BATCH_SIZE = 48
 LEARNING_RATE = 1e-6
 EPOCHS = 10
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -21,18 +21,16 @@ def collate_fn(batch):
     inputs = [item['equation'] for item in batch]
     targets = [item['spoken_English'] for item in batch]
 
-    # Tokenize the inputs and targets
     inputs = tokenizer(inputs, padding=True, truncation=True, return_tensors='pt')
     targets = tokenizer(targets, padding=True, truncation=True, return_tensors='pt')
 
-    # Move tensors to the device
     inputs = {k: v.to(DEVICE) for k, v in inputs.items()}
     targets = {k: v.to(DEVICE) for k, v in targets.items()}
 
     collated = {
         'input_ids': inputs['input_ids'],
         'attention_mask': inputs['attention_mask'],
-        'labels': targets['input_ids'],  # Use input_ids of targets as labels
+        'labels': targets['input_ids'],
         'decoder_attention_mask': targets['attention_mask']
     }
 
@@ -61,7 +59,6 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
 lr_scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
 
-# Training function
 def train():
     print("Training started...")
     print(f"Using device: {DEVICE}")
@@ -82,7 +79,6 @@ def train():
                 decoder_attention_mask=data_dict['decoder_attention_mask']
             )
 
-            # Backward pass
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
