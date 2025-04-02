@@ -7,6 +7,11 @@ class TeX2Eng(nn.Module):
         self.model = T5ForConditionalGeneration.from_pretrained(model_name)
         self.model.resize_token_embeddings(len(tokenizer))
     
-    def forward(self, input_ids, attention_mask, labels):
-        outputs = self.model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+    def forward(self, input_ids, attention_mask, labels, decoder_attention_mask):
+        outputs = self.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            labels=labels,
+            decoder_attention_mask=decoder_attention_mask
+        )
         return outputs.loss, outputs.logits
