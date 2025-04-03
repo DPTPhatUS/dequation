@@ -3,12 +3,11 @@ from torch.utils.data import Dataset, DataLoader
 from datasets import load_dataset
 
 class MathBridge(Dataset):
-    def __init__(self, phase: str | None = 'train'):
-        assert phase in ['train', 'test', 'validation'], f"Invalid phase: {phase}. Choose from 'train', 'test', or 'validation'."
+    def __init__(self, split: str = 'train'):
+        assert split.startswith('train') or split.startswith('validation') or split.startswith('test'), "Invalid split name. Use 'train', 'validation', or 'test'."
 
-        super(MathBridge, self).__init__()
-        self.dataset = load_dataset('Last-Bullet/MathBridge_Splitted', split=phase)
-        self.phase = phase
+        self.split = split
+        self.dataset = load_dataset('Last-Bullet/MathBridge_Splitted', split=split)
 
     def __len__(self):
         return len(self.dataset)

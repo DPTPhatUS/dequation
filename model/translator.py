@@ -15,3 +15,10 @@ class TeX2Eng(nn.Module):
             decoder_attention_mask=decoder_attention_mask
         )
         return outputs.loss, outputs.logits
+    
+    def generate(self, input_ids, attention_mask, **kwargs):
+        return self.model.generate(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            **kwargs
+        )
