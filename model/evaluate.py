@@ -11,7 +11,7 @@ from utils.bleu_score import CorpusBLEU
 def parse_args():
     parser = argparse.ArgumentParser(description='Evaluate the TeX2Eng model')
     parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--val_dataset', type=str, default='validation[:128]')
+    parser.add_argument('--dataset', type=str, default='validation[:128]')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--model_path', type=str, default='checkpoints/tex2eng_epoch_1.pth')
     parser.add_argument('--max_length', type=int, default=128)
@@ -36,7 +36,7 @@ def collate_fn(batch, tokenizer, device):
         'decoder_attention_mask': targets['attention_mask']
     }
 
-def evaluate(model, tokenizer, dataloader, device, max_length, num_beams, early_stopping):
+def evaluate(model, tokenizer, dataloader, max_length, num_beams, early_stopping):
     bleu = CorpusBLEU()
 
     model.eval()
@@ -66,7 +66,7 @@ if __name__ == '__main__':
     args = parse_args()
     tokenizer = AutoTokenizer.from_pretrained('aaai25withanonymous/MathBridge_T5_small')
 
-    dataset = MathBridge(split=args.val_dataset)
+    dataset = MathBridge(split=args.dataset)
     dataloader = DataLoader(
         dataset, 
         batch_size=args.batch_size, 
@@ -80,4 +80,4 @@ if __name__ == '__main__':
 
     model = TeX2Eng('google-t5/t5-small', tokenizer).to(args.device)
     model.load_state_dict(torch.load(args.model_path))
-    evaluate(model, tokenizer, dataloader, args.device, args.max_length, args.num_beams, args.early_stopping)
+    evaluate(model, tokenizer, dataloader, args.max_length, args.num_beams, args.early_stopping)
