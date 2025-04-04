@@ -121,10 +121,73 @@ def bleu_score(candidate_corpus, references_corpus, max_n=4, weights=[0.25] * 4)
 
         return bp * score.item()
     
+"""
+Memory-efficient version of BLEU score
+This implementation is based on the original torchtext implementation but modified to be more memory-efficient.
+"""
+class CorpusBLEU:
+    def __init__(self, max_n=4, weights=None):
+        assert max_n > 0
+        if weights:
+            assert len(weights) == max_n, 'Length of the "weights" list has be equal to max_n'
+
+        self.max_n = max_n
+        self.weights = torch.tensor(weights if weights else [1.0 / max_n] * max_n)
+        self.clipped_counts = torch.zeros(max_n)
+        self.total_counts = torch.zeros(max_n)
+        self.candidate_len = 0.0
+        self.refs_len = 0.0
+
+    def add(self, candidate, refs):
+        current_candidate_len = len(candidate)
+        self.candidate_len += current_candidate_len
+
+        # Get the length of the reference that's closest in length to the candidate
+        refs_len_list = [float(len(ref)) for ref in refs]
+        self.refs_len += min(refs_len_list, key=lambda x: abs(current_candidate_len - x))
+
+        reference_counters = _compute_ngram_counter(refs[0], self.max_n)
+        for ref in refs[1:]:
+            reference_counters = reference_counters | _compute_ngram_counter(ref, self.max_n)
+
+        candidate_counter = _compute_ngram_counter(candidate, self.max_n)
+
+        clipped_counter = candidate_counter & reference_counters
+
+        for ngram, count in clipped_counter.items():
+            self.clipped_counts[len(ngram) - 1] += count
+
+        for i in range(self.max_n):
+            # The number of N-grams in a `candidate` of T tokens is `T - (N - 1)`
+            self.total_counts[i] += max(current_candidate_len - i, 0)
+
+    def compute(self):
+        if min(self.clipped_counts) == 0:
+            return 0.0
+        
+        pn = self.clipped_counts / self.total_counts
+        log_pn = self.weights * torch.log(pn)
+        score = torch.exp(log_pn.sum())
+
+        bp = math.exp(min(1 - self.refs_len / self.candidate_len, 0))
+
+        return bp * score.item()
+    
 if __name__ == "__main__":
     # Example usage
     candidate_corpus = [['My', 'full', 'pytorch', 'test'], ['Another', 'Sentence']]
     references_corpus = [[['My', 'full', 'pytorch', 'test'], ['Completely', 'Different']], [['No', 'Match']]]
+
+    # From torchtext.data.metrics
     score = bleu_score(candidate_corpus, references_corpus)
     print(f"BLEU score: {score:.4f}")
     # Output: BLEU score: 0.8409
+
+    # Memory-efficient version
+    bleu = CorpusBLEU()
+
+    for cand, refs in zip(candidate_corpus, references_corpus):
+        bleu.add(cand, refs)
+
+    print(f"Corpus BLEU: {bleu.compute():.4f}")
+    # Output: Corpus BLEU: 0.8409

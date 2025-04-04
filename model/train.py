@@ -1,120 +1,87 @@
+import os
+import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from transformers import AutoTokenizer
 from torch.utils.data import DataLoader
+from transformers import AutoTokenizer
 from data.my_datasets import MathBridge
 from model.translator import TeX2Eng
-from utils.bleu_score import bleu_score
-import os
 
-BATCH_SIZE = 32
-LEARNING_RATE = 2e-5
-EPOCHS = 10
-DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+def parse_args():
+    parser = argparse.ArgumentParser(description='Train the TeX2Eng model')
+    parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--learning_rate', type=float, default=2e-5)
+    parser.add_argument('--epochs', type=int, default=1)
+    parser.add_argument('--train_dataset', type=str, default='train[:1000]')
+    parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
+    parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
+    return parser.parse_args()
 
-CHECKPOINT_DIR = 'checkpoints'
-os.makedirs(CHECKPOINT_DIR, exist_ok=True)
-
-tokenizer = AutoTokenizer.from_pretrained('aaai25withanonymous/MathBridge_T5_small')
-
-def collate_fn(batch):
+def collate_fn(batch, tokenizer, device):
     inputs = [item['equation'] for item in batch]
     targets = [item['spoken_English'] for item in batch]
 
     inputs = tokenizer(inputs, padding=True, truncation=True, return_tensors='pt')
     targets = tokenizer(targets, padding=True, truncation=True, return_tensors='pt')
 
-    inputs = {k: v.to(DEVICE) for k, v in inputs.items()}
-    targets = {k: v.to(DEVICE) for k, v in targets.items()}
-
-    collated = {
-        'input_ids': inputs['input_ids'],
-        'attention_mask': inputs['attention_mask'],
-        'labels': targets['input_ids'],
-        'decoder_attention_mask': targets['attention_mask']
+    return {
+        'input_ids': inputs['input_ids'].to(device),
+        'attention_mask': inputs['attention_mask'].to(device),
+        'labels': targets['input_ids'].to(device),
+        'decoder_attention_mask': targets['attention_mask'].to(device)
     }
 
-    return collated
-
-train_dataset = MathBridge(split='train[:1000]')
-val_dataset = MathBridge(split='validation[:125]')
-
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate_fn)
-val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, collate_fn=collate_fn)
-
-model = TeX2Eng('google-t5/t5-small', tokenizer).to(DEVICE)
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
-lr_scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
-
-def train():
+def train(args):
     print('Training started...')
-    print(f'Using device: {DEVICE}')
-    print(f'Batch size: {BATCH_SIZE}')
-    print(f'Learning rate: {LEARNING_RATE}')
-    print(f'Number of epochs: {EPOCHS}')
-    print(f'Training dataset size: {len(train_dataset)}')
-    print(f'Validation dataset size: {len(val_dataset)}')
-    
+    print(f'Using device: {args.device}')
+    print(f'Batch size: {args.batch_size}')
+    print(f'Learning rate: {args.learning_rate}')
+    print(f'Dataset split: {args.train_dataset}')
+
+    tokenizer = AutoTokenizer.from_pretrained('aaai25withanonymous/MathBridge_T5_small')
+    train_dataset = MathBridge(split=args.train_dataset)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=args.batch_size,
+        shuffle=True,
+        collate_fn=lambda batch: collate_fn(batch, tokenizer, args.device)
+    )
+
+    model = TeX2Eng('google-t5/t5-small', tokenizer).to(args.device)
+    optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
+    lr_scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+
+    os.makedirs(args.checkpoint_dir, exist_ok=True)
+
     model.train()
-    for epoch in range(EPOCHS):
-        running_loss = 0.0
-        for batch_idx, data_dict in enumerate(train_loader):
+    for epoch in range(args.epochs):
+        total_loss = 0.0
+        for batch_idx, batch in enumerate(train_loader):
             loss, _ = model(
-                input_ids=data_dict['input_ids'],
-                attention_mask=data_dict['attention_mask'],
-                labels=data_dict['labels'],
-                decoder_attention_mask=data_dict['decoder_attention_mask']
+                input_ids=batch['input_ids'],
+                attention_mask=batch['attention_mask'],
+                labels=batch['labels'],
+                decoder_attention_mask=batch['decoder_attention_mask']
             )
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-
-            running_loss += loss.item()
+            total_loss += loss.item()
 
             if batch_idx % 10 == 0:
-                print(f'Epoch [{epoch+1}/{EPOCHS}], Batch [{batch_idx+1}/{len(train_loader)}], Loss: {loss.item():.4f}')
+                print(f'Epoch [{epoch+1}/{args.epochs}], Batch [{batch_idx+1}/{len(train_loader)}], Loss: {loss.item():.4f}')
 
         lr_scheduler.step()
+        avg_loss = total_loss / len(train_loader)
+        print(f'Epoch [{epoch+1}/{args.epochs}] finished with Avg Loss: {avg_loss:.4f}')
 
-        print(f'Epoch [{epoch+1}/{EPOCHS}], Average Loss: {running_loss / len(train_loader):.4f}')
-
-        checkpoint_path = os.path.join(CHECKPOINT_DIR, f'model_epoch_{epoch+1}.pth')
+        checkpoint_path = os.path.join(args.checkpoint_dir, f'tex2eng_epoch_{epoch+1}.pth')
         torch.save(model.state_dict(), checkpoint_path)
-        print(f'Checkpoint saved at {checkpoint_path}')
+        print(f'Model checkpoint saved at {checkpoint_path}')
 
-        evaluate()
-
-def evaluate():
-    print('Evaluating...')
-
-    model.eval()
-    with torch.no_grad():
-        # BLEU score for the entire validation set
-        all_predicted = []
-        all_targets = []
-        for batch_idx, data_dict in enumerate(val_loader):
-            outputs = model.generate(
-                input_ids=data_dict['input_ids'],
-                attention_mask=data_dict['attention_mask'],
-                max_length=128,
-                num_beams=10,
-                early_stopping=True
-            )
-
-            generated_text = tokenizer.batch_decode(outputs, skip_special_tokens=True)
-            target_text = tokenizer.batch_decode(data_dict['labels'], skip_special_tokens=True)
-
-            all_predicted.extend(generated_text)
-            all_targets.extend(target_text)
-
-            if batch_idx % 10 == 0:  # Print every 10 batches
-                print(f'Batch [{batch_idx+1}/{len(val_loader)}], Predicted: {generated_text}, Target: {target_text}')
-
-        bleu = bleu_score(all_predicted, all_targets)
-        print(f'Overall BLEU score: {bleu:.4f}')
-            
 if __name__ == '__main__':
-    train()
+    args = parse_args()
+    train(args)
+    print('Training completed.')
