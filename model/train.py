@@ -48,7 +48,7 @@ def train(args):
 
     os.makedirs(args.checkpoint_dir, exist_ok=True)
 
-    print('Training started...')
+    print('\nTraining started...')
     print(f'Using device: {args.device}')
     print(f'Batch size: {args.batch_size}')
     print(f'Learning rate: {args.learning_rate}')
@@ -85,4 +85,4 @@ def train(args):
 if __name__ == '__main__':
     args = parse_args()
     train(args)
-    print('Training completed.')
+    print('\nTraining completed.')
