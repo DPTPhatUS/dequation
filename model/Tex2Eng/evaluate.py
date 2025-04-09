@@ -5,7 +5,7 @@ import os
 import argparse
 
 from data.my_datasets import MathBridge
-from model.translator import TeX2Eng
+from model.Tex2Eng.translator import TeX2Eng
 from utils.bleu_score import CorpusBLEU
 
 def parse_args():

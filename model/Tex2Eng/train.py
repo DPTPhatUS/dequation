@@ -6,7 +6,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
 from data.my_datasets import MathBridge
-from model.translator import TeX2Eng
+from model.Tex2Eng.translator import TeX2Eng
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train the TeX2Eng model')
