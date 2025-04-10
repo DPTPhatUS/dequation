@@ -44,7 +44,7 @@ def train(args):
         collate_fn=lambda batch: collate_fn(batch, tokenizer, args.device)
     )
 
-    model = Tex2Eng(model_name='aaai25withanonymous/MathBridge_T5_small', tokenizer=tokenizer).to(args.device)
+    model = Tex2Eng(model_name='google-t5/t5-small', tokenizer=tokenizer).to(args.device)
     if args.device == 'cuda' and args.num_gpus > 1:
         model = nn.DataParallel(model, device_ids=list(range(args.num_gpus)))
 
