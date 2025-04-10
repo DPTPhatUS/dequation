@@ -17,6 +17,7 @@ def parse_args():
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--num_gpus', type=int, default=1)
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
+    parser.add_argument('--verbose', action='store_true', help='Enable verbose output')
     return parser.parse_args()
 
 def collate_fn(batch, tokenizer, device):
@@ -68,7 +69,7 @@ def train(args):
                 labels=batch['labels'],
                 decoder_attention_mask=batch['decoder_attention_mask']
             )
-            
+
             if args.device == 'cuda' and args.num_gpus > 1:
                 loss = loss.mean()  # Average loss across GPUs
 
@@ -77,7 +78,7 @@ def train(args):
             optimizer.step()
             total_loss += loss.item()
 
-            if batch_idx % 10 == 0:
+            if args.verbose:
                 print(f'Epoch [{epoch+1}/{args.epochs}], Batch [{batch_idx+1}/{len(train_loader)}], Loss: {loss.item():.4f}')
 
         lr_scheduler.step()
