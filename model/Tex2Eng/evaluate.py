@@ -79,5 +79,12 @@ if __name__ == '__main__':
     print(f'Model path: {args.model_path}')
 
     model = Tex2Eng('google-t5/t5-small', tokenizer).to(args.device)
-    model.load_state_dict(torch.load(args.model_path))
+
+    # Load the state dictionary
+    state_dict = torch.load(args.model_path, map_location=args.device)
+    # Remove "module." prefix if necessary
+    if any(key.startswith("module.") for key in state_dict.keys()):
+        state_dict = {key.replace("module.", ""): value for key, value in state_dict.items()}
+    model.load_state_dict(state_dict)
+
     evaluate(model, tokenizer, dataloader, args.max_length, args.num_beams, args.early_stopping)
