@@ -68,6 +68,9 @@ def train(args):
                 labels=batch['labels'],
                 decoder_attention_mask=batch['decoder_attention_mask']
             )
+            
+            if args.device == 'cuda' and args.num_gpus > 1:
+                loss = loss.mean()  # Average loss across GPUs
 
             optimizer.zero_grad()
             loss.backward()
