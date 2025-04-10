@@ -5,15 +5,15 @@ import os
 import argparse
 
 from data.my_datasets import MathBridge
-from model.Tex2Eng.translator import TeX2Eng
+from model.Tex2Eng.translator import Tex2Eng
 from utils.bleu_score import CorpusBLEU
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Evaluate the TeX2Eng model')
+    parser = argparse.ArgumentParser(description='Evaluate the Tex2Eng model')
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--dataset', type=str, default='validation[:128]')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
-    parser.add_argument('--model_path', type=str, default='checkpoints/tex2eng_epoch_1.pth')
+    parser.add_argument('--model_path', type=str, default='checkpoints/Tex2Eng_epoch_1.pth')
     parser.add_argument('--max_length', type=int, default=128)
     parser.add_argument('--num_beams', type=int, default=4)
     parser.add_argument('--early_stopping', action='store_true')
@@ -78,6 +78,6 @@ if __name__ == '__main__':
     print(f'Device: {args.device}, Dataset size: {len(dataset)}')
     print(f'Model path: {args.model_path}')
 
-    model = TeX2Eng('google-t5/t5-small', tokenizer).to(args.device)
+    model = Tex2Eng('google-t5/t5-small', tokenizer).to(args.device)
     model.load_state_dict(torch.load(args.model_path))
     evaluate(model, tokenizer, dataloader, args.max_length, args.num_beams, args.early_stopping)

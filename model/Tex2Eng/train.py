@@ -6,15 +6,16 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
 from data.my_datasets import MathBridge
-from model.Tex2Eng.translator import TeX2Eng
+from model.Tex2Eng.translator import Tex2Eng
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Train the TeX2Eng model')
+    parser = argparse.ArgumentParser(description='Train the Tex2Eng model')
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--learning_rate', type=float, default=2e-5)
     parser.add_argument('--epochs', type=int, default=1)
     parser.add_argument('--dataset', type=str, default='train[:1000]')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
+    parser.add_argument('--num_gpus', type=int, default=1)
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
     return parser.parse_args()
 
@@ -42,9 +43,12 @@ def train(args):
         collate_fn=lambda batch: collate_fn(batch, tokenizer, args.device)
     )
 
-    model = TeX2Eng('google-t5/t5-small', tokenizer).to(args.device)
+    model = Tex2Eng(model_name='aaai25withanonymous/MathBridge_T5_small', tokenizer=tokenizer).to(args.device)
+    if args.device == 'cuda' and args.num_gpus > 1:
+        model = nn.DataParallel(model, device_ids=list(range(args.num_gpus)))
+
     optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
-    lr_scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+    lr_scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.96)
 
     os.makedirs(args.checkpoint_dir, exist_ok=True)
 
@@ -53,7 +57,6 @@ def train(args):
     print(f'Batch size: {args.batch_size}')
     print(f'Learning rate: {args.learning_rate}')
     print(f'Dataset size: {len(train_dataset)}')
-    print('\n')
 
     model.train()
     for epoch in range(args.epochs):
@@ -78,7 +81,7 @@ def train(args):
         avg_loss = total_loss / len(train_loader)
         print(f'Epoch [{epoch+1}/{args.epochs}], Avg Loss: {avg_loss:.4f}')
 
-        checkpoint_path = os.path.join(args.checkpoint_dir, f'tex2eng_epoch_{epoch+1}.pth')
+        checkpoint_path = os.path.join(args.checkpoint_dir, f'Tex2Eng_epoch_{epoch+1}.pth')
         torch.save(model.state_dict(), checkpoint_path)
         print(f'Model checkpoint saved at {checkpoint_path}')
 
