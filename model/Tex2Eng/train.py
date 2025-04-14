@@ -36,6 +36,7 @@ def collate_fn(batch, tokenizer, device):
 
 def train(args):
     tokenizer = AutoTokenizer.from_pretrained('aaai25withanonymous/MathBridge_T5_small')
+    
     train_dataset = MathBridge(split=args.dataset)
     train_loader = DataLoader(
         train_dataset,
@@ -86,7 +87,10 @@ def train(args):
         print(f'Epoch [{epoch+1}/{args.epochs}], Avg Loss: {avg_loss:.4f}')
 
         checkpoint_path = os.path.join(args.checkpoint_dir, f'Tex2Eng_epoch_{epoch+1}.pth')
-        torch.save(model.state_dict(), checkpoint_path)
+        state_dict = model.state_dict()
+        if any(key.startswith("module.") for key in state_dict.keys()):
+            state_dict = {key.replace("module.", ""): value for key, value in state_dict.items()}
+        torch.save(state_dict, checkpoint_path)
         print(f'Model checkpoint saved at {checkpoint_path}')
 
 if __name__ == '__main__':
