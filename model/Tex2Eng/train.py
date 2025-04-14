@@ -16,7 +16,7 @@ def parse_args():
     parser.add_argument('--dataset', type=str, default='train[:1000]')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--num_gpus', type=int, default=1)
-    parser.add_argument('--num_workers', type=int, default=4)
+    parser.add_argument('--num_workers', type=int, default=0)
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
     parser.add_argument('--verbose', action='store_true', help='Enable verbose output')
     return parser.parse_args()

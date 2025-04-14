@@ -20,7 +20,7 @@ def parse_args():
     parser.add_argument('--dataset', type=str, default='validation[:128]')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
-    parser.add_argument('--num_workers', type=int, default=4)
+    parser.add_argument('--num_workers', type=int, default=0)
     parser.add_argument('--max_length', type=int, default=128)
     parser.add_argument('--num_beams', type=int, default=4)
     parser.add_argument('--early_stopping', action='store_true')
@@ -63,8 +63,8 @@ def evaluate(args):
         collate_fn=lambda b: collate_fn(b, tokenizer, args.device)
     )
 
-    print('Starting evaluation...')
-    print(f'Device: {args.device}, Dataset size: {len(dataset)}')
+    print('\nStarting evaluation...')
+    print(f'\nDevice: {args.device}, Dataset size: {len(dataset)}')
 
     checkpoints = [file for file in os.listdir(args.checkpoint_dir) if file.startswith('Tex2Eng_epoch_') and file.endswith('.pth')]
     checkpoints.sort(key=extract_epoch, reverse=True)
@@ -74,9 +74,6 @@ def evaluate(args):
     print('Checkpoints: ', checkpoints)
 
     for checkpoint in checkpoints:
-        print('-'*20)
-        print(f'Evaluating: {checkpoint}')
-
         path = os.path.join(args.checkpoint_dir, checkpoint)
 
         state_dict = torch.load(path, map_location=args.device)
@@ -88,6 +85,9 @@ def evaluate(args):
 
         bleu = CorpusBLEU()
         meteor = METEOR()
+
+        print('-'*20)
+        print(f'Evaluating: {checkpoint}')
 
         model.eval()
         with torch.no_grad():
