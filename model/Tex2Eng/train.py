@@ -16,6 +16,7 @@ def parse_args():
     parser.add_argument('--dataset', type=str, default='train[:1000]')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--num_gpus', type=int, default=1)
+    parser.add_argument('--num_workers', type=int, default=4)
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
     parser.add_argument('--verbose', action='store_true', help='Enable verbose output')
     return parser.parse_args()
@@ -36,12 +37,13 @@ def collate_fn(batch, tokenizer, device):
 
 def train(args):
     tokenizer = AutoTokenizer.from_pretrained('aaai25withanonymous/MathBridge_T5_small')
-    
+
     train_dataset = MathBridge(split=args.dataset)
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
+        num_workers=args.num_workers,
         collate_fn=lambda batch: collate_fn(batch, tokenizer, args.device)
     )
 

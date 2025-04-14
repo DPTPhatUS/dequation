@@ -20,6 +20,7 @@ def parse_args():
     parser.add_argument('--dataset', type=str, default='validation[:128]')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
+    parser.add_argument('--num_workers', type=int, default=4)
     parser.add_argument('--max_length', type=int, default=128)
     parser.add_argument('--num_beams', type=int, default=4)
     parser.add_argument('--early_stopping', action='store_true')
@@ -58,6 +59,7 @@ def evaluate(args):
         dataset, 
         batch_size=args.batch_size, 
         shuffle=False,
+        num_workers=args.num_workers,
         collate_fn=lambda b: collate_fn(b, tokenizer, args.device)
     )
 
