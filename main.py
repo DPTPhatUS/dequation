@@ -1,5 +1,4 @@
 # Test trained model
-
 import torch
 from model.Tex2Eng.translator import Tex2Eng
 from transformers import AutoTokenizer
