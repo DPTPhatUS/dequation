@@ -116,6 +116,9 @@ def evaluate(args):
         bleu_score = bleu.compute()
         meteor_score = meteor.compute()
         print(f'BLEU: {bleu_score:.4f}, METEOR: {meteor_score:.4f}')
+        
+        del model
+        torch.cuda.empty_cache()
 
 if __name__ == '__main__':
     args = parse_args()
