@@ -1,3 +1,9 @@
 [submodule "model/TexTeller"]
 	path = model/TexTeller
 	url = https://github.com/DPTPhatUS/TexTeller.git
+[submodule "model/Tex2Eng/im2markup"]
+	path = model/Tex2Eng/im2markup
+	url = git@github.com:DPTPhatUS/im2markup.git
+[submodule "model/Tex2Eng/TangentCFT"]
+	path = model/Tex2Eng/TangentCFT
+	url = git@github.com:DPTPhatUS/TangentCFT.git
