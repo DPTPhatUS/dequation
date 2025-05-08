@@ -22,7 +22,7 @@ def parse_args():
     return parser.parse_args()
 
 def collate_fn(batch, tokenizer, device):
-    inputs = [item['equation'] for item in batch]
+    inputs = [' '.join([item['context_before'], item['equation'], item['context_after']]) for item in batch]
     targets = [item['spoken_English'] for item in batch]
 
     inputs = tokenizer(inputs, padding=True, truncation=True, return_tensors='pt')
