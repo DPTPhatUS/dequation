@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "latex-to-speech": "^0.0.4",
+    "speech-rule-engine": "^5.0.0-alpha.2"
+  }
+}
