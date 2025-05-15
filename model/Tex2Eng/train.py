@@ -19,6 +19,7 @@ def parse_args():
     parser.add_argument('--num_workers', type=int, default=0)
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
     parser.add_argument('--verbose', action='store_true', help='Enable verbose output')
+    
     return parser.parse_args()
 
 def collate_fn(batch, tokenizer, device):

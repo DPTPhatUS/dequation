@@ -25,6 +25,7 @@ def parse_args():
     parser.add_argument('--num_beams', type=int, default=4)
     parser.add_argument('--early_stopping', action='store_true')
     parser.add_argument('--verbose', action='store_true')
+    
     return parser.parse_args()
 
 def collate_fn(batch, tokenizer, device):
