@@ -52,9 +52,9 @@ class SRE(Translator):
 
 if __name__ == "__main__":
     latex = r"x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}"
-    sre = SRE()
+    translator = SRE()
     try:
-        english = sre.tex_to_eng(latex)
+        english = translator.tex_to_eng(latex)
         print("LaTeX:", latex)
         print("English:", english)
     except Exception as e:
