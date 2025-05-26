@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
-from data.my_datasets import MyDataset
+from data.my_dataset import MyDataset
 from model.Tex2Eng.translator import Tex2Eng
 
 def parse_args():

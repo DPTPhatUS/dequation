@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
 
 
-from data.my_datasets import MyDataset
+from data.my_dataset import MyDataset
 from model.Tex2Eng.translator import Tex2Eng
 
 from metrics.bleu import CorpusBLEU
@@ -17,7 +17,7 @@ from metrics.meteor import METEOR
 def parse_args():
     parser = argparse.ArgumentParser(description='Evaluate the Tex2Eng model')
     parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--dataset', type=str, default='validation[:128]')
+    parser.add_argument('--dataset', type=str, default='validation')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
     parser.add_argument('--num_workers', type=int, default=0)
