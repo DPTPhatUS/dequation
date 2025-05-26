@@ -1,5 +1,6 @@
 import os
 import argparse
+from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -55,7 +56,7 @@ def train(args):
     model.train()
     for epoch in range(args.epochs):
         total_loss = 0.0
-        for batch_idx, batch in enumerate(train_loader):
+        for batch_idx, batch in tqdm(enumerate(train_loader), total=len(train_loader), desc=f"Epoch {epoch+1}/{args.epochs}", disable=args.verbose, unit='batch'):
             inputs = tokenizer(batch['equation'], padding=True, truncation=True, return_tensors="pt")
             targets = tokenizer(batch['spoken_English'], padding=True, truncation=True, return_tensors="pt")
             loss, _ = model(
