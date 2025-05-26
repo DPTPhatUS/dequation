@@ -13,7 +13,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--learning_rate', type=float, default=2e-5)
     parser.add_argument('--epochs', type=int, default=1)
-    parser.add_argument('--dataset', type=str, default='train[:1000]')
+    parser.add_argument('--dataset', type=str, default='train[:10000]')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--num_gpus', type=int, default=1)
     parser.add_argument('--num_workers', type=int, default=0)
@@ -22,19 +22,8 @@ def parse_args():
     
     return parser.parse_args()
 
-def collate_fn(batch, tokenizer, device):
-    inputs = [item['equation'] for item in batch]
-    targets = [item['spoken_English'] for item in batch]
-
-    inputs = tokenizer(inputs, padding=True, truncation=True, return_tensors='pt')
-    targets = tokenizer(targets, padding=True, truncation=True, return_tensors='pt')
-
-    return {
-        'input_ids': inputs['input_ids'].to(device),
-        'attention_mask': inputs['attention_mask'].to(device),
-        'labels': targets['input_ids'].to(device),
-        'decoder_attention_mask': targets['attention_mask'].to(device)
-    }
+def collate_fn(batch):
+    return {k: [item[k] for item in batch] for k, _ in batch[0].items()}
 
 def train(args):
     tokenizer = AutoTokenizer.from_pretrained('aaai25withanonymous/MathBridge_T5_small')
@@ -45,7 +34,7 @@ def train(args):
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=args.num_workers,
-        collate_fn=lambda batch: collate_fn(batch, tokenizer, args.device)
+        collate_fn=collate_fn
     )
 
     model = Tex2Eng(model_name='google-t5/t5-small', tokenizer=tokenizer).to(args.device)
@@ -67,11 +56,13 @@ def train(args):
     for epoch in range(args.epochs):
         total_loss = 0.0
         for batch_idx, batch in enumerate(train_loader):
+            inputs = tokenizer(batch['equation'], padding=True, truncation=True, return_tensors="pt")
+            targets = tokenizer(batch['spoken_English'], padding=True, truncation=True, return_tensors="pt")
             loss, _ = model(
-                input_ids=batch['input_ids'],
-                attention_mask=batch['attention_mask'],
-                labels=batch['labels'],
-                decoder_attention_mask=batch['decoder_attention_mask']
+                input_ids=inputs['input_ids'].to(args.device),
+                attention_mask=inputs['attention_mask'].to(args.device),
+                labels=targets['input_ids'].to(args.device),
+                decoder_attention_mask=targets['attention_mask'].to(args.device)
             )
 
             if args.device == 'cuda' and args.num_gpus > 1:

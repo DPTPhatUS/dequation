@@ -28,22 +28,9 @@ def parse_args():
     
     return parser.parse_args()
 
-def collate_fn(batch, tokenizer, device):
-    inputs = [item['equation'] for item in batch]
-    targets = [item['spoken_English'] for item in batch]
 
-    inputs = tokenizer(inputs, padding=True, truncation=True, return_tensors='pt')
-    targets = tokenizer(targets, padding=True, truncation=True, return_tensors='pt')
-
-    inputs = {k: v.to(device) for k, v in inputs.items()}
-    targets = {k: v.to(device) for k, v in targets.items()}
-
-    return {
-        'input_ids': inputs['input_ids'],
-        'attention_mask': inputs['attention_mask'],
-        'labels': targets['input_ids'],
-        'decoder_attention_mask': targets['attention_mask']
-    }
+def collate_fn(batch):
+    return {k: [item[k] for item in batch] for k, _ in batch[0].items()}
 
 def extract_epoch(filename):
     match = re.search(r'Tex2Eng_epoch_(\d+)\.pth', filename)
@@ -61,7 +48,7 @@ def evaluate(args):
         batch_size=args.batch_size, 
         shuffle=False,
         num_workers=args.num_workers,
-        collate_fn=lambda b: collate_fn(b, tokenizer, args.device)
+        collate_fn=collate_fn
     )
 
     print('\nStarting evaluation...')
@@ -93,16 +80,18 @@ def evaluate(args):
         model.eval()
         with torch.no_grad():
             for data_dict in tqdm(dataloader, disable=args.verbose, unit='batch'):
+                inputs = tokenizer(data_dict['equation'], padding=True, truncation=True, return_tensors="pt")
+                targets = tokenizer(data_dict['spoken_English'], padding=True, truncation=True, return_tensors="pt")
                 outputs = model.generate(
-                    input_ids=data_dict['input_ids'],
-                    attention_mask=data_dict['attention_mask'],
+                    input_ids=inputs['input_ids'].to(args.device),
+                    attention_mask=inputs['attention_mask'].to(args.device),
                     max_length=args.max_length,
                     num_beams=args.num_beams,
                     early_stopping=args.early_stopping
                 )
 
                 generated_text = tokenizer.batch_decode(outputs, skip_special_tokens=True)
-                target_text = tokenizer.batch_decode(data_dict['labels'], skip_special_tokens=True)
+                target_text = tokenizer.batch_decode(targets['input_ids'], skip_special_tokens=True)
 
                 for gen, target in zip(generated_text, target_text):
                     hyp = gen.split()
