@@ -1,9 +1,8 @@
-import torch
 from torch.utils.data import Dataset
 from datasets import load_dataset
 from typing import Optional, Callable
 
-class MathBridge(Dataset):
+class MyDataset(Dataset):
     def __init__(self, split: str = 'train', transform: Optional[Callable] = None):
         available_splits = ['train', 'validation', 'test']
         assert any(split.startswith(s) for s in available_splits), f"Invalid split name '{split}'. Use one of {available_splits}."
@@ -12,9 +11,9 @@ class MathBridge(Dataset):
         self.transform = transform
 
         try:
-            self.dataset = load_dataset('Last-Bullet/MathBridge_Splitted', split=split)
+            self.dataset = load_dataset('Last-Bullet/LaTeX_Spoken', split=split)
         except Exception as e:
-            raise RuntimeError(f"Failed to load dataset 'Last-Bullet/MathBridge_Splitted' with split '{split}': {e}")
+            raise RuntimeError(f"Failed to load dataset 'Last-Bullet/LaTeX_Spoken' with split '{split}': {e}")
 
     def __len__(self):
         return len(self.dataset)

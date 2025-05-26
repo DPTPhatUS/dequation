@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
 
 
-from data.my_datasets import MathBridge
+from data.my_datasets import MyDataset
 from model.Tex2Eng.translator import Tex2Eng
 
 from metrics.bleu import CorpusBLEU
@@ -42,7 +42,7 @@ def extract_epoch(filename):
 def evaluate(args):
     tokenizer = AutoTokenizer.from_pretrained('aaai25withanonymous/MathBridge_T5_small')
 
-    dataset = MathBridge(split=args.dataset)
+    dataset = MyDataset(split=args.dataset)
     dataloader = DataLoader(
         dataset, 
         batch_size=args.batch_size, 

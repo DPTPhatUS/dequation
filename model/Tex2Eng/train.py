@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from transformers import AutoTokenizer
-from data.my_datasets import MathBridge
+from data.my_datasets import MyDataset
 from model.Tex2Eng.translator import Tex2Eng
 
 def parse_args():
@@ -13,7 +13,7 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--learning_rate', type=float, default=2e-5)
     parser.add_argument('--epochs', type=int, default=1)
-    parser.add_argument('--dataset', type=str, default='train[:10000]')
+    parser.add_argument('--dataset', type=str, default='train')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
     parser.add_argument('--num_gpus', type=int, default=1)
     parser.add_argument('--num_workers', type=int, default=0)
@@ -28,7 +28,7 @@ def collate_fn(batch):
 def train(args):
     tokenizer = AutoTokenizer.from_pretrained('aaai25withanonymous/MathBridge_T5_small')
 
-    train_dataset = MathBridge(split=args.dataset)
+    train_dataset = MyDataset(split=args.dataset)
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
