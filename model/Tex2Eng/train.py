@@ -1,6 +1,8 @@
 import os
 import argparse
 from tqdm import tqdm
+import re
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -19,6 +21,7 @@ def parse_args():
     parser.add_argument('--num_gpus', type=int, default=1)
     parser.add_argument('--num_workers', type=int, default=0)
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
+    parser.add_argument('--resume_epoch', type=int, help='Epoch to resume training')
     parser.add_argument('--verbose', action='store_true', help='Enable verbose output')
     
     return parser.parse_args()
@@ -38,12 +41,31 @@ def train(args):
         collate_fn=collate_fn
     )
 
+    if args.resume_epoch:
+        path = os.path.join(args.checkpoint_dir, f'Tex2Eng_epoch_{args.resume_epoch}.pth')
+        checkpoint = torch.load(path, map_location=args.device)
+        if 'model_state_dict' in checkpoint:
+            state_dict = checkpoint['model_state_dict']
+            if any(key.startswith("module.") for key in state_dict.keys()):
+                state_dict = {key.replace("module.", ""): value for key, value in state_dict.items()}
+        else:
+            state_dict = checkpoint
+            if any(key.startswith("module.") for key in state_dict.keys()):
+                state_dict = {key.replace("module.", ""): value for key, value in state_dict.items()}
+                
     model = Tex2Eng(model_name='google-t5/t5-small', tokenizer=tokenizer).to(args.device)
+    model.load_state_dict(state_dict)
+
     if args.device == 'cuda' and args.num_gpus > 1:
         model = nn.DataParallel(model, device_ids=list(range(args.num_gpus)))
 
     optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate)
     lr_scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.96)
+
+    if args.resume_epoch and 'optimizer_state_dict' in checkpoint:
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        if 'scheduler_state_dict' in checkpoint:
+            lr_scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
 
     os.makedirs(args.checkpoint_dir, exist_ok=True)
 
@@ -54,9 +76,10 @@ def train(args):
     print(f'Dataset size: {len(train_dataset)}')
 
     model.train()
-    for epoch in range(args.epochs):
+    start_epoch = args.resume_epoch if args.resume_epoch else 0
+    for epoch in range(start_epoch, start_epoch + args.epochs):
         total_loss = 0.0
-        for batch_idx, batch in tqdm(enumerate(train_loader), total=len(train_loader), desc=f"Epoch {epoch+1}/{args.epochs}", disable=args.verbose, unit='batch'):
+        for batch_idx, batch in tqdm(enumerate(train_loader), total=len(train_loader), desc=f"Epoch {epoch+1}/{start_epoch + args.epochs}", disable=args.verbose, unit='batch'):
             inputs = tokenizer(batch['equation'], padding=True, truncation=True, return_tensors="pt")
             targets = tokenizer(batch['spoken_English'], padding=True, truncation=True, return_tensors="pt")
             loss, _ = model(
@@ -79,13 +102,16 @@ def train(args):
 
         lr_scheduler.step()
         avg_loss = total_loss / len(train_loader)
-        print(f'Epoch [{epoch+1}/{args.epochs}], Avg Loss: {avg_loss:.4f}')
+        print(f'Epoch {epoch+1}/{start_epoch + args.epochs}, Avg Loss: {avg_loss:.4f}')
 
         checkpoint_path = os.path.join(args.checkpoint_dir, f'Tex2Eng_epoch_{epoch+1}.pth')
-        state_dict = model.state_dict()
-        if any(key.startswith("module.") for key in state_dict.keys()):
-            state_dict = {key.replace("module.", ""): value for key, value in state_dict.items()}
-        torch.save(state_dict, checkpoint_path)
+        checkpoint_dict = {
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'scheduler_state_dict': lr_scheduler.state_dict(),
+            'epoch': epoch+1
+        }
+        torch.save(checkpoint_dict, checkpoint_path)
         print(f'Model checkpoint saved at {checkpoint_path}')
 
 if __name__ == '__main__':

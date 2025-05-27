@@ -64,7 +64,12 @@ def evaluate(args):
     for checkpoint in checkpoints:
         path = os.path.join(args.checkpoint_dir, checkpoint)
 
-        state_dict = torch.load(path, map_location=args.device)
+        checkpoint_dict = torch.load(path, map_location=args.device)
+        if isinstance(checkpoint_dict, dict) and 'model_state_dict' in checkpoint_dict:
+            state_dict = checkpoint_dict['model_state_dict']
+        else:
+            state_dict = checkpoint_dict
+
         if any(key.startswith("module.") for key in state_dict.keys()):
             state_dict = {key.replace("module.", ""): value for key, value in state_dict.items()}
 
