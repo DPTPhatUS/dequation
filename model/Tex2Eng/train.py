@@ -41,6 +41,7 @@ def train(args):
         collate_fn=collate_fn
     )
 
+    model = Tex2Eng(model_name='google-t5/t5-small', tokenizer=tokenizer).to(args.device)
     if args.resume_epoch:
         path = os.path.join(args.checkpoint_dir, f'Tex2Eng_epoch_{args.resume_epoch}.pth')
         checkpoint = torch.load(path, map_location=args.device)
@@ -53,8 +54,8 @@ def train(args):
             if any(key.startswith("module.") for key in state_dict.keys()):
                 state_dict = {key.replace("module.", ""): value for key, value in state_dict.items()}
                 
-    model = Tex2Eng(model_name='google-t5/t5-small', tokenizer=tokenizer).to(args.device)
-    model.load_state_dict(state_dict)
+        model.load_state_dict(state_dict)
+                
 
     if args.device == 'cuda' and args.num_gpus > 1:
         model = nn.DataParallel(model, device_ids=list(range(args.num_gpus)))
@@ -109,7 +110,6 @@ def train(args):
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'scheduler_state_dict': lr_scheduler.state_dict(),
-            'epoch': epoch+1
         }
         torch.save(checkpoint_dict, checkpoint_path)
         print(f'Model checkpoint saved at {checkpoint_path}')
