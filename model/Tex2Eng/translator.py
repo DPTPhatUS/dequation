@@ -13,6 +13,7 @@ class Translator:
 class Tex2Eng(nn.Module):
     def __init__(self, model_name: str, tokenizer):
         super(Tex2Eng, self).__init__()
+        
         self.model = T5ForConditionalGeneration.from_pretrained(model_name)
         self.model.resize_token_embeddings(len(tokenizer))
     
