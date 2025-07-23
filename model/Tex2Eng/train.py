@@ -44,15 +44,15 @@ def train(args):
     model = Tex2Eng(model_name='google-t5/t5-small', tokenizer=tokenizer).to(args.device)
     if args.resume_epoch:
         path = os.path.join(args.checkpoint_dir, f'Tex2Eng_epoch_{args.resume_epoch}.pth')
+        
         checkpoint = torch.load(path, map_location=args.device)
         if 'model_state_dict' in checkpoint:
             state_dict = checkpoint['model_state_dict']
-            if any(key.startswith("module.") for key in state_dict.keys()):
-                state_dict = {key.replace("module.", ""): value for key, value in state_dict.items()}
         else:
             state_dict = checkpoint
-            if any(key.startswith("module.") for key in state_dict.keys()):
-                state_dict = {key.replace("module.", ""): value for key, value in state_dict.items()}
+            
+        if any(key.startswith("module.") for key in state_dict.keys()):
+            state_dict = {key.replace("module.", ""): value for key, value in state_dict.items()}
                 
         model.load_state_dict(state_dict)
                 
