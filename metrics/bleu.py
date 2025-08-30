@@ -6,6 +6,7 @@ import torch
 BLEU score implementation from torchtext.data.metrics
 """
 
+
 def ngrams_iterator(token_list, ngrams):
     """Return an iterator that yields the given tokens and their ngrams.
 
@@ -28,6 +29,7 @@ def ngrams_iterator(token_list, ngrams):
         for x in _get_ngrams(n):
             yield " ".join(x)
 
+
 def _compute_ngram_counter(tokens, max_n):
     """Create a Counter with a count of unique n-grams in the tokens list
 
@@ -49,7 +51,9 @@ def _compute_ngram_counter(tokens, max_n):
              ('me', 'you'): 1})
     """
     assert max_n > 0
-    ngrams_counter = collections.Counter(tuple(x.split(" ")) for x in ngrams_iterator(tokens, max_n))
+    ngrams_counter = collections.Counter(
+        tuple(x.split(" ")) for x in ngrams_iterator(tokens, max_n)
+    )
 
     return ngrams_counter
 
@@ -87,7 +91,7 @@ def bleu_score(candidate_corpus, references_corpus, max_n=4, weights=[0.25] * 4)
     candidate_len = 0.0
     refs_len = 0.0
 
-    for (candidate, refs) in zip(candidate_corpus, references_corpus):
+    for candidate, refs in zip(candidate_corpus, references_corpus):
         current_candidate_len = len(candidate)
         candidate_len += current_candidate_len
 
@@ -120,16 +124,21 @@ def bleu_score(candidate_corpus, references_corpus, max_n=4, weights=[0.25] * 4)
         bp = math.exp(min(1 - refs_len / candidate_len, 0))
 
         return bp * score.item()
-    
+
+
 """
 Memory-efficient version of BLEU score
 This implementation is based on the original torchtext implementation but modified to be more memory-efficient.
 """
+
+
 class CorpusBLEU:
     def __init__(self, max_n=4, weights=None):
         assert max_n > 0
         if weights:
-            assert len(weights) == max_n, 'Length of the "weights" list has be equal to max_n'
+            assert (
+                len(weights) == max_n
+            ), 'Length of the "weights" list has be equal to max_n'
 
         self.max_n = max_n
         self.weights = torch.tensor(weights if weights else [1.0 / max_n] * max_n)
@@ -144,11 +153,15 @@ class CorpusBLEU:
 
         # Get the length of the reference that's closest in length to the candidate
         refs_len_list = [float(len(ref)) for ref in refs]
-        self.refs_len += min(refs_len_list, key=lambda x: abs(current_candidate_len - x))
+        self.refs_len += min(
+            refs_len_list, key=lambda x: abs(current_candidate_len - x)
+        )
 
         reference_counters = _compute_ngram_counter(refs[0], self.max_n)
         for ref in refs[1:]:
-            reference_counters = reference_counters | _compute_ngram_counter(ref, self.max_n)
+            reference_counters = reference_counters | _compute_ngram_counter(
+                ref, self.max_n
+            )
 
         candidate_counter = _compute_ngram_counter(candidate, self.max_n)
 
@@ -164,7 +177,7 @@ class CorpusBLEU:
     def compute(self):
         if min(self.clipped_counts) == 0:
             return 0.0
-        
+
         pn = self.clipped_counts / self.total_counts
         log_pn = self.weights * torch.log(pn)
         score = torch.exp(log_pn.sum())
@@ -172,11 +185,15 @@ class CorpusBLEU:
         bp = math.exp(min(1 - self.refs_len / self.candidate_len, 0))
 
         return bp * score.item()
-    
+
+
 if __name__ == "__main__":
     # Example usage
-    candidate_corpus = [['My', 'full', 'pytorch', 'test'], ['Another', 'Sentence']]
-    references_corpus = [[['My', 'full', 'pytorch', 'test'], ['Completely', 'Different']], [['No', 'Match']]]
+    candidate_corpus = [["My", "full", "pytorch", "test"], ["Another", "Sentence"]]
+    references_corpus = [
+        [["My", "full", "pytorch", "test"], ["Completely", "Different"]],
+        [["No", "Match"]],
+    ]
 
     # From torchtext.data.metrics
     score = bleu_score(candidate_corpus, references_corpus)
